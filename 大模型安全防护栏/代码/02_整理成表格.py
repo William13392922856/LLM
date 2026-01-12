@@ -21,13 +21,13 @@ def parse_dialogue(dialogue_text):
 all_dialogues = []
 
 # 读取第一个文件
-with open('../数据/原始数据/危险对话,txt', 'r', encoding='utf-8') as f:
+with open('../数据/原始数据/危险对话.txt', 'r', encoding='utf-8') as f:
     dialogues = f.read().strip().split('\n\n')
     for dialogue in dialogues:
         all_dialogues.append(parse_dialogue(dialogue))
 
 # 读取第二个文件
-with open('../数据/原始数据/危险对话,txt', 'r', encoding='utf-8') as f:
+with open('../数据/原始数据/危险对话.txt', 'r', encoding='utf-8') as f:
     dialogues = f.read().strip().split('\n\n')
     for dialogue in dialogues:
         all_dialogues.append(parse_dialogue(dialogue))
