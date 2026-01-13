@@ -4,7 +4,7 @@ import pandas as pd
 df = pd.read_csv('../数据/处理后的数据/对话数据.csv')
 
 # 显示前几行
-print("原始数据：")
+print("前几行原始数据：")
 print(df.head())
 
 # 定义一个标签到数字的映射

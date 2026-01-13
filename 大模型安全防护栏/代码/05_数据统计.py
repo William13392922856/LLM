@@ -1,6 +1,9 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-
+import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei']  # 指定默认字体为黑体或微软雅黑
+matplotlib.rcParams['axes.unicode_minus'] = False  # 正确显示负号
 # 读取数据
 df = pd.read_csv('../数据/处理后的数据/对话数据_带数字标签.csv')
 

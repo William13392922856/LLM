@@ -2,7 +2,7 @@
 print("=== 开始读取数据 ===")
 
 # 打开文件
-with open('../数据/原始数据/合并数据.txt.txt', 'r', encoding='utf-8') as f:
+with open('../数据/原始数据/合并数据.txt', 'r', encoding='utf-8') as f:
     content = f.read()
     print("文件内容：")
     print(content)
