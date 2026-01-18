@@ -1,0 +1,30 @@
+api:
+  API密钥: sk-28bc3150642c44daaa4d7e5489af1455
+  api_key: sk-28bc3150642c44daaa4d7e5489af1455
+  地址: https://api.deepseek.com
+  最大长度: 2000
+  模型名称: deepseek-chat
+  温度: 0.3
+数据:
+  批次大小: 4
+  样本数量: 100
+  测试比例: 0.2
+  验证比例: 0.1
+模型:
+  LoRA参数alpha: 32
+  LoRA参数r: 16
+  LoRA层:
+  - q_proj
+  - k_proj
+  - v_proj
+  - o_proj
+  dropout率: 0.1
+  基础模型: D:\PythonProject\本地模型\Qwen2.5-0.5B-Instruct
+训练:
+  保存间隔: 100
+  学习率: 0.0002
+  批次大小: 2
+  日志间隔: 10
+  梯度累积: 8
+  热身步数: 100
+  训练轮数: 3
