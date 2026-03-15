@@ -89,7 +89,7 @@ class 模型训练器:
 
         return True
 
-    def 开始训练(self):
+    def 开始训练(self, 自动确认=False):
         """开始模型训练流程"""
         print("="*60)
         print("🎯 开始模型训练 - 本地模型版本")
@@ -103,10 +103,13 @@ class 模型训练器:
         self.显示配置信息()
 
         # 3. 询问是否开始训练
-        确认 = input("\n⚠️  是否开始训练? (y/N): ").strip().lower()
-        if 确认 != 'y':
-            print("训练已取消")
-            return False
+        if not 自动确认:
+            确认 = input("\n⚠️  是否开始训练? (y/N): ").strip().lower()
+            if 确认 != 'y':
+                print("训练已取消")
+                return False
+        else:
+            print("\n⚠️  自动开始训练...")
 
         # 4. 执行训练
         return self.执行训练()
@@ -167,14 +170,14 @@ class 模型训练器:
                 训练数据 = json.load(f)
 
             危险样本 = sum(1 for 数据 in 训练数据 if 数据.get('标签') == 1)
-            安全样本 = sum(1 for 数据 in 训练_data if 数据.get('标签') == 0)
+            安全样本 = sum(1 for 数据 in 训练数据 if 数据.get('标签') == 0)
 
             print("\n📈 数据统计:")
             print(f"   总样本数: {len(训练数据)}")
             print(f"   危险样本: {危险样本}")
             print(f"   安全样本: {安全样本}")
             if 训练数据:
-                print(f"   危险比例: {危险样本/len(训练_data)*100:.1f}%")
+                print(f"   危险比例: {危险样本/len(训练数据)*100:.1f}%")
         except:
             print("\n📈 数据统计: 无法加载数据")
 
@@ -229,6 +232,7 @@ class 模型训练器:
             from transformers import AutoModelForCausalLM, AutoTokenizer
 
             try:
+                print(f"   正在加载分词器: {本地模型路径}")
                 # 强制只使用本地文件
                 tokenizer = AutoTokenizer.from_pretrained(
                     本地模型路径,
@@ -240,29 +244,37 @@ class 模型训练器:
                     tokenizer.pad_token = tokenizer.eos_token
 
                 print("   ✅ 分词器加载成功")
+                print(f"   分词器类型: {type(tokenizer)}")
+                print(f"   词汇表大小: {tokenizer.vocab_size}")
 
             except Exception as e:
                 print(f"   ❌ 分词器加载失败: {e}")
-                print("   尝试使用基础模型名称加载...")
-                tokenizer = AutoTokenizer.from_pretrained(基础模型配置)
-                if tokenizer.pad_token is None:
-                    tokenizer.pad_token = tokenizer.eos_token
+                import traceback
+                traceback.print_exc()
+                return False
 
-            # 加载模型
-            device = "cuda" if torch.cuda.is_available() else "cpu"
+            # 加载模型 - 强制使用CPU和float16以节省内存
+            device = "cpu"
             print(f"   使用设备: {device}")
 
             try:
+                print(f"   正在加载模型: {本地模型路径}")
+                print(f"   使用精度: float16")
+                
                 model = AutoModelForCausalLM.from_pretrained(
                     本地模型路径,
-                    torch_dtype=torch.float16 if device == "cuda" else torch.float32,
-                    device_map="auto" if device == "cuda" else None,
+                    torch_dtype=torch.float16,
+                    device_map=None,
                     local_files_only=True,
                     trust_remote_code=True
                 )
                 print("   ✅ 模型加载成功")
+                print(f"   模型类型: {type(model)}")
+                print(f"   模型设备: {next(model.parameters()).device}")
             except Exception as e:
                 print(f"   ❌ 模型加载失败: {e}")
+                import traceback
+                traceback.print_exc()
                 return False
 
             # 3. 配置LoRA
@@ -296,7 +308,10 @@ class 模型训练器:
             # 转换数据格式
             def 格式化样本(样本):
                 提示词 = 样本.get('提示词', '')
+                # 处理可能带有空格的键名
                 推理过程 = 样本.get('推理过程', '')
+                if not 推理过程:
+                    推理过程 = 样本.get(' 推理过程', '')
                 return f"提示词: {提示词}\n安全分析: {推理过程}"
 
             训练文本 = [格式化样本(样本) for 样本 in 训练数据]
@@ -306,19 +321,15 @@ class 模型训练器:
             dataset = Dataset.from_dict({"text": 训练文本})
 
             def 预处理函数(样本):
-                # 使用 return_tensors="pt" 返回PyTorch张量
                 编码结果 = tokenizer(
                     样本["text"],
                     truncation=True,
                     padding="max_length",
-                    max_length=512,
-                    return_tensors="pt"  # ✅ 关键：返回张量格式
+                    max_length=512
                 )
+                return 编码结果
 
-                # 从批处理中提取单个样本
-                return {key: val[0] for key, val in 编码结果.items()}
-
-            处理后数据集 = dataset.map(预处理函数, batched=False)  # ✅ 单样本处理
+            处理后数据集 = dataset.map(预处理函数, batched=False, remove_columns=["text"])  # ✅ 移除 text 字段
 
             # 5. 设置训练参数（严格按照配置）
             print("\n4️⃣ 配置训练参数...")
@@ -346,9 +357,9 @@ class 模型训练器:
             )
 
             # 6. 创建训练器
-            from transformers import Trainer, DataCollatorForSeq2Seq
+            from transformers import Trainer, DataCollatorForLanguageModeling
 
-            data_collator = DataCollatorForSeq2Seq(tokenizer, pad_to_multiple_of=8)
+            data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
 
             trainer = Trainer(
                 model=model,
@@ -414,7 +425,7 @@ class 模型训练器:
             print("="*60)
             print(f"\n📁 模型已保存到: {保存路径}")
             print("📄 模型文件列表:")
-            for 文件 in 保存_path.glob("*"):
+            for 文件 in 保存路径.glob("*"):
                 print(f"  - {文件.name}")
 
             return True
@@ -431,20 +442,29 @@ class 模型训练器:
 
 # 测试代码
 if __name__ == "__main__":
+    import sys
+    
     print("🧪 测试模型训练器 (本地模型版本)...")
 
     try:
         训练器 = 模型训练器()
 
-        # 显示配置
-        训练器.显示配置信息()
-
-        # 询问是否测试训练
-        测试 = input("\n是否测试训练流程? (y/N): ").strip().lower()
-        if 测试 == 'y':
-            训练器.开始训练()
+        # 检查是否有自动训练参数
+        自动训练 = len(sys.argv) > 1 and sys.argv[1] == "--auto"
+        
+        if 自动训练:
+            print("\n🤖 自动模式: 开始训练...")
+            训练器.开始训练(自动确认=True)
         else:
-            print("测试完成，未开始训练")
+            # 显示配置
+            训练器.显示配置信息()
+
+            # 询问是否测试训练
+            测试 = input("\n是否测试训练流程? (y/N): ").strip().lower()
+            if 测试 == 'y':
+                训练器.开始训练()
+            else:
+                print("测试完成，未开始训练")
     except Exception as e:
         print(f"❌ 初始化失败: {e}")
         import traceback
