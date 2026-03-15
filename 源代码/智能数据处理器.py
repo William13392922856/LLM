@@ -292,7 +292,7 @@ class 智能数据处理器:
         return 推理映射
 
     def 生成训练数据集(self, 危险样本: List[str], 安全样本: List[str],
-                     最大危险样本数: int = 70, 最大安全样本数: int = 30) -> List[Dict[str, Any]]:
+                     最大危险样本数: int = 110, 最大安全样本数: int = 110) -> List[Dict[str, Any]]:
         """生成训练数据集"""
         训练数据 = []
 
