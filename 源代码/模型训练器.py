@@ -229,7 +229,17 @@ class 模型训练器:
 
             # 2. 加载本地模型和分词器
             print("\n1️⃣ 加载本地模型和分词器...")
-            from transformers import AutoModelForCausalLM, AutoTokenizer
+            import time
+            start_time = time.time()
+            
+            try:
+                from transformers import AutoModelForCausalLM, AutoTokenizer
+                print("   ✅ 导入transformers成功")
+            except Exception as e:
+                print(f"   ❌ 导入transformers失败: {e}")
+                import traceback
+                traceback.print_exc()
+                return False
 
             try:
                 print(f"   正在加载分词器: {本地模型路径}")
@@ -246,6 +256,7 @@ class 模型训练器:
                 print("   ✅ 分词器加载成功")
                 print(f"   分词器类型: {type(tokenizer)}")
                 print(f"   词汇表大小: {tokenizer.vocab_size}")
+                print(f"   分词器加载耗时: {time.time() - start_time:.2f}秒")
 
             except Exception as e:
                 print(f"   ❌ 分词器加载失败: {e}")
@@ -258,6 +269,7 @@ class 模型训练器:
             print(f"   使用设备: {device}")
 
             try:
+                model_start_time = time.time()
                 print(f"   正在加载模型: {本地模型路径}")
                 print(f"   使用精度: float16")
                 
@@ -271,6 +283,7 @@ class 模型训练器:
                 print("   ✅ 模型加载成功")
                 print(f"   模型类型: {type(model)}")
                 print(f"   模型设备: {next(model.parameters()).device}")
+                print(f"   模型加载耗时: {time.time() - model_start_time:.2f}秒")
             except Exception as e:
                 print(f"   ❌ 模型加载失败: {e}")
                 import traceback
@@ -329,7 +342,12 @@ class 模型训练器:
                 )
                 return 编码结果
 
-            处理后数据集 = dataset.map(预处理函数, batched=False, remove_columns=["text"])  # ✅ 移除 text 字段
+            # 处理数据集并移除text字段
+            处理后数据集 = dataset.map(预处理函数, batched=False)
+            # 明确移除text字段
+            处理后数据集 = 处理后数据集.remove_columns(["text"])
+            print(f"   ✅ 处理后数据集特征: {处理后数据集.features}")
+            print(f"   ✅ 处理后数据集大小: {len(处理后数据集)}")
 
             # 5. 设置训练参数（严格按照配置）
             print("\n4️⃣ 配置训练参数...")
@@ -349,7 +367,7 @@ class 模型训练器:
                 fp16=torch.cuda.is_available(),
                 logging_dir=str(self.当前目录 / "日志文件" / "训练日志"),
                 report_to="none",
-                remove_unused_columns=False,
+                remove_unused_columns=True,
                 save_total_limit=2,
                 load_best_model_at_end=False,
                 metric_for_best_model="loss",
