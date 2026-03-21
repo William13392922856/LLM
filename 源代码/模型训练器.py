@@ -264,9 +264,11 @@ class 模型训练器:
                 traceback.print_exc()
                 return False
 
-            # 加载模型 - 强制使用CPU和float16以节省内存
-            device = "cpu"
+            # 加载模型 - 自动检测GPU
+            device = "cuda" if torch.cuda.is_available() else "cpu"
             print(f"   使用设备: {device}")
+            if device == "cuda":
+                print(f"   GPU: {torch.cuda.get_device_name(0)}")
 
             try:
                 model_start_time = time.time()
@@ -276,10 +278,15 @@ class 模型训练器:
                 model = AutoModelForCausalLM.from_pretrained(
                     本地模型路径,
                     torch_dtype=torch.float16,
-                    device_map=None,
+                    device_map="auto" if device == "cuda" else None,
                     local_files_only=True,
                     trust_remote_code=True
                 )
+                
+                # 如果使用CPU，手动将模型移动到CPU
+                if device == "cpu":
+                    model = model.to("cpu")
+                    
                 print("   ✅ 模型加载成功")
                 print(f"   模型类型: {type(model)}")
                 print(f"   模型设备: {next(model.parameters()).device}")

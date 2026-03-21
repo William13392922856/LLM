@@ -36,19 +36,17 @@ class 推理交互器:
             print("❌ 模型目录不存在")
             return None
 
-        # 查找所有模型文件
-        模型文件列表 = list(模型目录.glob("*/pytorch_model.bin")) + \
-                       list(模型目录.glob("*.bin")) + \
-                       list(模型目录.glob("*.pt"))
+        # 查找所有LoRA adapter模型目录
+        模型目录列表 = [d for d in 模型目录.iterdir() if d.is_dir() and (d / "adapter_model.safetensors").exists()]
 
-        if not 模型文件列表:
-            print("❌ 没有找到模型文件")
+        if not 模型目录列表:
+            print("❌ 没有找到LoRA adapter模型")
             return None
 
-        # 返回最新修改的文件
-        最新模型 = max(模型文件列表, key=lambda x: x.stat().st_mtime)
-        print(f"✅ 找到模型: {最新_model}")
-        return 最新模型
+        # 返回最新修改的目录
+        最新模型目录 = max(模型目录列表, key=lambda x: x.stat().st_mtime)
+        print(f"✅ 找到模型: {最新模型目录}")
+        return 最新模型目录
 
     def 加载配置(self) -> Dict[str, Any]:
         """加载配置文件"""
@@ -68,18 +66,57 @@ class 推理交互器:
         try:
             print("🔄 正在加载模型...")
 
+            # 获取基础模型路径
+            base_model = self.配置.get('模型', {}).get('基础模型', 'Qwen/Qwen2.5-0.5B-Instruct')
+            
+            # 如果是相对路径，转换为绝对路径
+            import os
+            if not os.path.isabs(base_model):
+                base_model_abs = str((self.当前目录 / base_model).resolve())
+            else:
+                base_model_abs = base_model
+                
+            print(f"   基础模型: {base_model_abs}")
+            print(f"   LoRA adapter: {self.模型路径}")
+
+            # 检查是否是本地路径
+            使用本地模型 = os.path.exists(base_model_abs)
+            if 使用本地模型:
+                print(f"   ✅ 使用本地模型")
+                base_model = base_model_abs
+            else:
+                print(f"   📥 将从HuggingFace下载模型")
+
             # 加载分词器
-            base_model = self.配置.get('model', {}).get('base_model', 'Qwen/Qwen2.5-1.5B-Instruct')
-            self.分词器 = AutoTokenizer.from_pretrained(base_model)
+            self.分词器 = AutoTokenizer.from_pretrained(
+                base_model,
+                trust_remote_code=True,
+                local_files_only=使用本地模型
+            )
 
             if self.分词器.pad_token is None:
                 self.分词器.pad_token = self.分词器.eos_token
 
-            # 加载模型
+            print("   ✅ 分词器加载成功")
+
+            # 加载基础模型
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            print(f"   使用设备: {device}")
+            
             self.模型 = AutoModelForCausalLM.from_pretrained(
-                self.模型路径.parent if self.模型_path.suffix in ['.bin', '.pt'] else self.模型路径,
-                device_map="auto",
-                torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32
+                base_model,
+                device_map="auto" if device == "cuda" else None,
+                torch_dtype=torch.float16 if device == "cuda" else torch.float32,
+                trust_remote_code=True,
+                local_files_only=使用本地模型
+            )
+
+            # 加载LoRA adapter
+            from peft import PeftModel
+            self.模型 = PeftModel.from_pretrained(
+                self.模型,
+                str(self.模型路径),
+                is_trainable=False
             )
 
             self.模型.eval()  # 设置为评估模式
@@ -88,6 +125,8 @@ class 推理交互器:
 
         except Exception as e:
             print(f"❌ 加载模型失败: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
     def 生成推理(self, 提示词: str, 最大长度: int = 500) -> Tuple[str, int]:
@@ -138,7 +177,7 @@ class 推理交互器:
             推理文本 = self.分词器.decode(输出[0], skip_special_tokens=True)
 
             # 提取推理部分
-            推理文本 = 推理文本[len(输入_text):].strip()
+            推理文本 = 推理文本[len(输入文本):].strip()
 
             # 判断安全等级
             安全等级 = self.判断安全等级(推理文本)
@@ -254,23 +293,21 @@ class 推理交互器:
             if 安全等级 == 0:
                 print("\n✅ 判断结果: 安全 - 可以回答")
             elif 安全等级 == 1:
-                print("\n❌ 判断结果: 危险 - 不建议回答")
+                print("\n❌ 判断结果: 危险 - 拒绝回答")
             else:
-                print("\n⚠️  判断结果: 不确定")
+                print("\n⚠️  判断结果: 不确定 - 拒绝回答")
 
-            # 询问是否调用API
-            if 安全等级 == 0:  # 安全
-                选择 = input("\n🤔 是否调用API回答这个问题? (y/N): ").strip().lower()
-                if 选择 == 'y':
-                    print("\n🤖 正在调用API生成回答...")
-                    回答 = self.调用API回答(提示词)
-                    print("\n" + "=" * 60)
-                    print("💬 API回答:")
-                    print("=" * 60)
-                    print(回答)
-                    print("=" * 60)
+            # 根据安全等级自动决定是否调用API
+            if 安全等级 == 0:  # 安全 - 自动调用API回答
+                print("\n🤖 正在调用API生成回答...")
+                回答 = self.调用API回答(提示词)
+                print("\n" + "=" * 60)
+                print("💬 API回答:")
+                print("=" * 60)
+                print(回答)
+                print("=" * 60)
             else:
-                print("\n🚫 此问题被标记为不安全或不确定，不调用API")
+                print("\n🚫 此问题被标记为不安全，拒绝回答")
 
             print("\n" + "=" * 60)
 

@@ -1,8 +1,28 @@
 {
-  "模型名称": "安全防护栏模型",
-  "基础模型": "未知",
-  "训练时间": "2026-01-18 14:14:20",
-  "样本数量": 65,
-  "训练轮数": 3,
-  "学习率": 0.0002
+  "模型名称": "安全防护栏模型_20260321_115335",
+  "基础模型": "D:\\PythonProject\\本地模型\\Qwen2.5-0.5B-Instruct",
+  "本地路径": "d:\\kentstudy\\Trae CN\\projects\\安全栏\\LLM\\模型文件\\Qwen2.5-0.5B-Instruct",
+  "训练时间": "2026-03-21 11:53:36",
+  "样本数量": 77,
+  "训练参数": {
+    "学习率": 0.0002,
+    "训练轮数": 3,
+    "批次大小": 2,
+    "梯度累积": 8,
+    "LoRA_rank": 16,
+    "LoRA_alpha": 32
+  },
+  "模型文件": [
+    "adapter_config.json",
+    "adapter_model.safetensors",
+    "added_tokens.json",
+    "chat_template.jinja",
+    "merges.txt",
+    "README.md",
+    "special_tokens_map.json",
+    "tokenizer.json",
+    "tokenizer_config.json",
+    "training_args.bin",
+    "vocab.json"
+  ]
 }

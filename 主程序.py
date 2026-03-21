@@ -213,7 +213,12 @@ def 运行模型训练(配置):
         return
 
     try:
+        print("正在导入模型训练器...")
+        print(f"源代码目录: {源代码目录}")
+        print(f"sys.path包含源代码目录: {str(源代码目录) in sys.path}")
+        
         from 模型训练器 import 模型训练器
+        print("✅ 模型训练器导入成功")
 
         print("开始训练安全防护栏模型...")
         print("这可能需要较长时间，请耐心等待...")
@@ -224,11 +229,14 @@ def 运行模型训练(配置):
         print("\n✅ 模型训练完成！")
         print("模型已保存到: 模型文件/")
 
-    except ImportError:
-        print("❌ 错误: 无法导入模型训练器")
-        print("请创建 源代码/模型训练器.py 文件")
+    except ImportError as e:
+        print(f"❌ 错误: 无法导入模型训练器")
+        print(f"导入错误详情: {e}")
+        print(f"请检查 源代码/模型训练器.py 文件是否存在")
     except Exception as e:
         print(f"❌ 训练出错: {e}")
+        import traceback
+        traceback.print_exc()
 
 def 运行模型测试():
     """运行模型测试"""

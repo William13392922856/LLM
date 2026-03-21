@@ -19,7 +19,7 @@ api:
   - v_proj
   - o_proj
   dropout率: 0.1
-  基础模型: D:\PythonProject\本地模型\Qwen2.5-0.5B-Instruct
+  基础模型: 模型文件/Qwen2.5-0.5B-Instruct
 训练:
   保存间隔: 100
   学习率: 0.0002
