@@ -1,11 +1,15 @@
 # 模型文件 - 太大不上传
+模型文件/
 模型文件/Qwen2.5-0.5B-Instruct/
+模型文件/Qwen2.5-1.5B-Instruct/
 模型文件/安全防护栏模型_*/
 模型文件/训练输出/
-模型文件/*.bin
-模型文件/*.pt
-模型文件/*.safetensors
-模型文件/model.safetensors
+*.safetensors
+*.bin
+*.pth
+*.pt
+*.onnx
+*.ckpt
 
 # 保留模型信息文件
 !模型文件/模型信息.json

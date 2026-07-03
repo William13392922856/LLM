@@ -1,10 +1,17 @@
 api:
-  API密钥: sk-28bc3150642c44daaa4d7e5489af1455
-  api_key: sk-28bc3150642c44daaa4d7e5489af1455
+  api_key: sk-e019532cc58940cbbf51c2cd9e9eab84
   地址: https://api.deepseek.com
   最大长度: 2000
   模型名称: deepseek-chat
   温度: 0.3
+推理:
+  top_k: 50
+  top_p: 0.9
+  最大生成长度: 500
+  最大输入长度: 512
+  温度: 0.7
+  采样模式: true
+  重复惩罚: 1.1
 数据:
   批次大小: 4
   样本数量: 100
@@ -18,13 +25,27 @@ api:
   - k_proj
   - v_proj
   - o_proj
+  - gate_proj
+  - up_proj
+  - down_proj
   dropout率: 0.1
-  基础模型: 模型文件/Qwen2.5-0.5B-Instruct
+  基础模型: 模型文件/Qwen2.5-1.5B-Instruct
 训练:
-  保存间隔: 100
+  dataloader_num_workers: 4
+  disable_tqdm: false
+  gradient_checkpointing: true
+  logging_first_step: true
+  lr_scheduler_type: cosine
+  max_grad_norm: 1.0
+  save_total_limit: 3
+  use_cache: false
+  warmup_ratio: 0.1
+  weight_decay: 0.01
+  优化器: adamw_torch
+  保存间隔: 200
   学习率: 0.0002
-  批次大小: 2
-  日志间隔: 10
-  梯度累积: 8
+  批次大小: 4
+  日志间隔: 20
+  梯度累积: 4
   热身步数: 100
-  训练轮数: 3
+  训练轮数: 5
